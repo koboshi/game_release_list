@@ -1,9 +1,7 @@
 package engine
 
 import (
-	"sync"
 	"github.com/koboshi/go-tool"
-	"github.com/koboshi/game_release_list/context"
 	"fmt"
 	"net/http"
 	"log"
@@ -13,22 +11,14 @@ import (
 	"time"
 )
 
-//抓取指定年月的发售列表
-func GrabReleaseList(config *context.Config, year int, month int, n *sync.WaitGroup) {
-	defer n.Done()
-	//链接数据库
-	host := config.DbHost
-	username := config.DbUserName
-	password := config.DbPassword
-	dbname := config.DbSchema
-	charset := config.DbCharset
-	customParams := make(map[string]string)
-	customParams["readTimeout"] = "10s"
-	customParams["writeTimeout"] = "10s"
-	database := new(tool.Database)
-	database.Connect(host, username, password, dbname, charset, customParams)
-	defer database.Close()
+type GrabArg struct {
+	Database *tool.Database
+	Year int
+	Month int
+}
 
+//抓取指定年月的发售列表
+func GrabReleaseList(database *tool.Database, year int, month int) {
 	//爬取游戏发售表
 	//http://www.a9vg.com/game/release?genres=&region=&platform=&year={year}&month={month}&quarter=
 	//构造url

@@ -8,6 +8,9 @@ type Config struct {
 	DbPassword string `ini:"mysql_psw"`
 	DbSchema string `ini:"mysql_schema"`
 	DbCharset string `ini:"mysql_charset"`
+	DbMaxConn int `ini:"mysql_max_conn"`
+	DbIdleConn int `ini:"mysql_idle_conn"`
+	GrabMaxConcurrent int `ini:"grab_max_concurrent"`
 }
 
 //读取配置文件并转成结构体
