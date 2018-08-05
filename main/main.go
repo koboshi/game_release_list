@@ -13,8 +13,37 @@ import (
 	"github.com/koboshi/go-tool"
 )
 
+
+func initRoutinePool(n int) (*tunny.Pool) {
+	pool := tunny.NewFunc(n, func (arg interface{}) interface{} {
+		rArg, ok := arg.(engine.GrabArg)
+		if ok {
+			engine.GrabReleaseList(rArg.Database, rArg.Year, rArg.Month)
+		}else {
+			panic("tunny pool arg error")
+		}
+		return true
+	})
+	log.Println(fmt.Sprintf("Max concurrent: %d", n))
+	return pool
+}
+
+func initDatabase(config context.Config) (*tool.Database) {
+	host := config.DbHost
+	username := config.DbUserName
+	password := config.DbPassword
+	dbname := config.DbSchema
+	charset := config.DbCharset
+	customParams := make(map[string]string)
+	customParams["readTimeout"] = "10s"
+	customParams["writeTimeout"] = "10s"
+	database := new(tool.Database)
+	database.Connect(host, username, password, dbname, charset, customParams)
+	database.SetPool(config.DbMaxConn, config.DbIdleConn, 0)
+	return database
+}
+
 func main() {
-	var err error
 	now := time.Now()
 	//获取参数
 	argYear := flag.Int("year", 0, "specified year")
@@ -39,30 +68,11 @@ func main() {
 	}
 
 	//创建协程池
-	pool := tunny.NewFunc(config.GrabMaxConcurrent, func (arg interface{}) interface{} {
-		rArg, ok := arg.(engine.GrabArg)
-		if ok {
-			engine.GrabReleaseList(rArg.Database, rArg.Year, rArg.Month)
-		}else {
-			panic("tunny pool arg error")
-		}
-		return true
-	})
+	pool := initRoutinePool(config.GrabMaxConcurrent)
 	defer pool.Close()
-	log.Println(fmt.Sprintf("Max concurrent: %d", config.GrabMaxConcurrent))
 
 	//创建数据库连接池
-	host := config.DbHost
-	username := config.DbUserName
-	password := config.DbPassword
-	dbname := config.DbSchema
-	charset := config.DbCharset
-	customParams := make(map[string]string)
-	customParams["readTimeout"] = "10s"
-	customParams["writeTimeout"] = "10s"
-	database := new(tool.Database)
-	database.Connect(host, username, password, dbname, charset, customParams)
-	database.SetPool(config.DbMaxConn, config.DbIdleConn, 0)
+	database := initDatabase(config)
 	defer database.Close()
 
 	//执行游戏发售日期抓取
