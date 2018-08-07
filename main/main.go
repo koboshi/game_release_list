@@ -13,6 +13,16 @@ import (
 	"github.com/koboshi/go-tool"
 )
 
+var config context.Config
+
+func init() {
+	//读取配置文件
+	var err error
+	config, err = context.ReadConfig(filepath.Dir(os.Args[0]) + "/conf/gel.conf")
+	if err != nil {
+		panic(err)
+	}
+}
 
 func initRoutinePool(n int) (*tunny.Pool) {
 	pool := tunny.NewFunc(n, func (arg interface{}) interface{} {
@@ -43,14 +53,10 @@ func initDatabase(config context.Config) (*tool.Database) {
 	return database
 }
 
-func main() {
-	now := time.Now()
-	//获取参数
-	argYear := flag.Int("year", 0, "specified year")
-	argMonth := flag.Int("month", 0, "specified month")
-	argAll := flag.Bool("all", false, "grab all")
-	flag.Parse()
+//执行游戏发售数据爬取
+func grab(argYear *int, argMonth *int, argAll *bool) {
 	//检查参数
+	now := time.Now()
 	if *argYear == 0 {
 		//没有从外部取得正确年份，则为当前年份
 		*argYear, _, _ = now.Date()
@@ -59,12 +65,6 @@ func main() {
 		//没有从外部取得正确月份，则为当前月
 		_, tmp, _ := now.Date()
 		*argMonth = int(tmp)
-	}
-
-	//读取配置文件
-	config, err := context.ReadConfig(filepath.Dir(os.Args[0]) + "/conf/gel.conf")
-	if err != nil {
-		panic(err)
 	}
 
 	//创建协程池
@@ -96,4 +96,32 @@ func main() {
 	}
 	//n.Wait()
 	log.Println(fmt.Sprintf("Done"))
+}
+
+//执行游戏发售数据结构化整理
+func cron() {
+	//创建数据库连接池
+	database := initDatabase(config)
+	defer database.Close()
+
+	//循环读取整个爬虫表
+
+	//整理数据
+}
+
+func main() {
+	//获取参数
+	argCron := flag.Bool("cron", false, "cron")
+	argYear := flag.Int("year", 0, "specified year")
+	argMonth := flag.Int("month", 0, "specified month")
+	argAll := flag.Bool("all", false, "grab all")
+	flag.Parse()
+	if *argCron {
+		//执行定时任务
+		cron()
+	}else {
+		//执行爬取
+		grab(argYear, argMonth, argAll)
+	}
+
 }
