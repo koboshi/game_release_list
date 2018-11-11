@@ -16,7 +16,7 @@ import (
 var config context.Config
 
 func init() {
-	//读取配置文件
+	//读取配置文件并加载
 	var err error
 	config, err = context.ReadConfig(filepath.Dir(os.Args[0]) + "/conf/gel.conf")
 	if err != nil {
