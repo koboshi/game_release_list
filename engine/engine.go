@@ -1,7 +1,6 @@
 package engine
 
 import (
-	"github.com/koboshi/go-tool"
 	"fmt"
 	"net/http"
 	"log"
@@ -9,16 +8,17 @@ import (
 	"strings"
 	"strconv"
 	"time"
+	"github.com/koboshi/mole/database"
 )
 
 type GrabArg struct {
-	Database *tool.Database
+	Database *database.Database
 	Year int
 	Month int
 }
 
 //抓取指定年月的发售列表
-func GrabReleaseList(database *tool.Database, year int, month int) {
+func GrabReleaseList(database *database.Database, year int, month int) {
 	//爬取游戏发售表
 	//http://www.a9vg.com/game/release?genres=&region=&platform=&year={year}&month={month}&quarter=
 	//构造url
