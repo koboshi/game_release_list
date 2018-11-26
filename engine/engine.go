@@ -11,28 +11,22 @@ import (
 	"github.com/koboshi/mole/database"
 )
 
-type GrabArg struct {
-	Database *database.Database
-	Year int
-	Month int
-}
-
 //抓取指定年月的发售列表
 func GrabReleaseList(database *database.Database, year int, month int) {
 	//爬取游戏发售表
 	//http://www.a9vg.com/game/release?genres=&region=&platform=&year={year}&month={month}&quarter=
 	//构造url
 	url := fmt.Sprintf("http://www.a9vg.com/game/release?genres=&region=&platform=&year=%d&month=%d&quarter=", year, month)
-	//log.Println(fmt.Sprintf("year:%d month:%d url:%s", year, month, url))
-	//发起请求
+	//构造请求
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		panic(err)
 	}
+	//构造请求头
 	req.Header.Add("Cookie", "WxSS_a648_saltkey=gBKd9Ob3; WxSS_a648_lastvisit=1531750974; taihe=6bdc704084fdc7e7406e6ce106bb5050; Hm_lvt_68e4f3f877acf23e052991a583acf43e=1531754575,1532009703,1532266194; Hm_lpvt_68e4f3f877acf23e052991a583acf43e=1532266194; taihe_session=efcdb2fd68abb580885ad125bb9517e2")
 	req.Header.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 Safari/537.36")
 	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := client.Do(req)//发起http请求
 	defer resp.Body.Close()
 	if err != nil {
 		panic(err)
@@ -70,44 +64,39 @@ func GrabReleaseList(database *database.Database, year int, month int) {
 			lang := subS.Find(".ddwz2 span").Eq(1).Find("em").Text()
 			company := subS.Find(".ddwz2 span").Eq(2).Find("em").Text()
 
-			//log.Println(year)
-			//log.Println(i)
-			//log.Println(fmt.Sprintf("游戏编号: %d", id))
-			//log.Println(fmt.Sprintf("发售日期: %s", releaseDate))
-			//log.Println(fmt.Sprintf("游戏名称: %s", title))
-			//log.Println(fmt.Sprintf("游戏类型: %s", gameType))
-			//log.Println(fmt.Sprintf("支持语种: %s", lang))
-			//log.Println(fmt.Sprintf("发行公司: %s", company))
-			//log.Println(fmt.Sprintf("运行平台: %s", platform))
-			//log.Println()
-
-			//检查是否存在
-			sql := "SELECT COUNT(*) AS `count` FROM game WHERE out_id = ? AND platform = ?"
-			var count int
-			database.QueryOne(sql, id, platform).Scan(&count)
-			if count > 0 {
-				//存在则更新发售日期和语种
-				data := make(map[string]interface{})
-				data["release_date"] = releaseDate
-				data["type"] = gameType
-				data["language"] = lang
-				data["company"] = company
-				whereStr := "out_id = ? AND platform = ?"
-				database.Update(data, "game", whereStr, id, platform)
-			}else {
-				//不存在则写入数据至mysql
-				data := make(map[string]interface{})
-				data["out_id"] = id
-				data["name"] = title
-				data["release_date"] = releaseDate
-				data["type"] = gameType
-				data["language"] = lang
-				data["company"] = company
-				data["platform"] = platform
-				data["add_time"] = time.Now().Format("2006-01-02 15:04:05")
-				data["edit_time"] = time.Now().Format("2006-01-02 15:04:05")
-				database.Ignore(data, "game")
-			}
+			//写入数据
+			addReleaseInfo(database, id, platform, title, releaseDate, gameType, lang, company)
 		})
 	})
+}
+
+//写入发售数据至数据库
+func addReleaseInfo(database *database.Database, id int, platform string, title string, releaseDate string, gameType string, lang string, company string) {
+	//检查是否存在
+	sql := "SELECT COUNT(*) AS `count` FROM game WHERE out_id = ? AND platform = ?"
+	var count int
+	database.QueryOne(sql, id, platform).Scan(&count)
+	if count > 0 {
+		//存在则更新发售日期和语种
+		data := make(map[string]interface{})
+		data["release_date"] = releaseDate
+		data["type"] = gameType
+		data["language"] = lang
+		data["company"] = company
+		whereStr := "out_id = ? AND platform = ?"
+		database.Update(data, "game", whereStr, id, platform)
+	}else {
+		//不存在则写入数据至mysql
+		data := make(map[string]interface{})
+		data["out_id"] = id
+		data["name"] = title
+		data["release_date"] = releaseDate
+		data["type"] = gameType
+		data["language"] = lang
+		data["company"] = company
+		data["platform"] = platform
+		data["add_time"] = time.Now().Format("2006-01-02 15:04:05")
+		data["edit_time"] = time.Now().Format("2006-01-02 15:04:05")
+		database.Ignore(data, "game")
+	}
 }
