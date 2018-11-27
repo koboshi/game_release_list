@@ -24,6 +24,8 @@ func init() {
 		panic(err)
 	}
 	NowTime = time.Now()
+	log.SetPrefix("MSG:")
+	log.SetFlags(log.Ldate | log.Ltime | log.Llongfile)
 }
 
 func initGoroutinePool(size int) (*work.Pool) {
