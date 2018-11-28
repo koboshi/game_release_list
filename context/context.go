@@ -1,6 +1,15 @@
 package context
 
-import "gopkg.in/ini.v1"
+import (
+	"gopkg.in/ini.v1"
+	"path/filepath"
+	"os"
+	"errors"
+	"github.com/koboshi/mole/database"
+	"log"
+	"sync"
+	"github.com/koboshi/mole/work"
+)
 
 type Config struct {
 	DbHost string `ini:"mysql_host"`
@@ -13,19 +22,68 @@ type Config struct {
 	GrabMaxConcurrent int `ini:"grab_max_concurrent"`
 }
 
-//读取配置文件并转成结构体
-func ReadConfig(path string) (Config, error) {
+var ErrLoadConf = errors.New("load gel.conf fail")
+var ErrDbConnect = errors.New("connect database fail")
+var ErrGoroutinePool = errors.New("create goroutine pool fail")
+
+var appConfig Config
+var db *database.Database
+
+func init() {
+	log.SetPrefix("MSG:")
+	log.SetFlags(log.Ldate | log.Ltime | log.Llongfile)
+
+	var err error
+	appConfig, err = load(filepath.Dir(os.Args[0]) + "/conf/gel.conf")
+	if err != nil {
+		panic(ErrLoadConf)
+	}
+}
+
+func load(path string) (Config, error) {
 	var config Config
 	conf, err := ini.Load(path)   //加载配置文件
 	if err != nil {
-		//log.Fatal("load config file fail!")
 		return config, err
 	}
 	conf.BlockMode = false
 	err = conf.MapTo(&config)   //解析成结构体
 	if err != nil {
-		//log.Fatal("mapto config file fail!")
 		return config, err
 	}
 	return config, nil
+}
+
+func GetConfig() (Config) {
+	return appConfig
+}
+
+func GetGoroutinePool() (*work.Pool) {
+	pool, err := work.New(appConfig.GrabMaxConcurrent)
+	if err != nil {
+		panic(ErrGoroutinePool)
+	}
+	return pool
+}
+
+func GetDatabase() (*database.Database) {
+	l := new(sync.Mutex)
+	l.Lock()
+	defer l.Unlock()
+
+	if db != nil {
+		return db
+	}
+
+	host := appConfig.DbHost
+	username := appConfig.DbUserName
+	password := appConfig.DbPassword
+	schema := appConfig.DbSchema
+	charset := appConfig.DbCharset
+	conn, err := database.New(host, username, password, schema, charset)
+	if err != nil {
+		log.Println(err)
+		panic(ErrDbConnect)
+	}
+	return conn
 }

@@ -2,63 +2,24 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"time"
 	"log"
-	"path/filepath"
 	"flag"
 	"github.com/koboshi/game_release_list/context"
 	"github.com/koboshi/game_release_list/engine"
-	"github.com/koboshi/mole/database"
-	"github.com/koboshi/mole/work"
 )
 
-var AppConfig context.Config
 var NowTime time.Time
 
 func init() {
-	//读取配置文件并加载
-	var err error
-	AppConfig, err = context.ReadConfig(filepath.Dir(os.Args[0]) + "/conf/gel.conf")
-	if err != nil {
-		panic(err)
-	}
 	NowTime = time.Now()
-	log.SetPrefix("MSG:")
-	log.SetFlags(log.Ldate | log.Ltime | log.Llongfile)
-}
-
-func initGoroutinePool(size int) (*work.Pool) {
-	pool, err := work.New(size)
-	if err != nil {
-		panic(err)
-	}
-	return pool
-}
-
-func initDatabase(config context.Config) (*database.Database) {
-	host := config.DbHost
-	username := config.DbUserName
-	password := config.DbPassword
-	schema := config.DbSchema
-	charset := config.DbCharset
-
-	conn, err := database.New(host, username, password, schema, charset)
-	if err != nil {
-		panic(err)
-	}
-	return conn
 }
 
 //执行游戏发售数据爬取
 func exec(argYear *int, argMonth *int, argAll *bool) {
 	//创建goroutine池
-	pool := initGoroutinePool(AppConfig.GrabMaxConcurrent)
+	pool := context.GetGoroutinePool()
 	defer pool.Shutdown()
-
-	//创建数据库连接池
-	conn := initDatabase(AppConfig)
-	defer conn.Close()
 
 	//执行游戏发售日期抓取
 	if *argAll {
@@ -69,7 +30,7 @@ func exec(argYear *int, argMonth *int, argAll *bool) {
 		for i := 2010; i <= endYear; i++ {
 			for j := 1; j <= 12; j ++ {
 				pool.Run(func() {
-					engine.GrabReleaseList(conn, i, j)
+					engine.GrabReleaseList(i, j)
 				})
 			}
 		}
@@ -77,7 +38,7 @@ func exec(argYear *int, argMonth *int, argAll *bool) {
 	}else {
 		//只抓取指定年月
 		log.Println(fmt.Sprintf("Start %d %d", *argYear, *argMonth))
-		engine.GrabReleaseList(conn, *argYear, *argMonth)
+		engine.GrabReleaseList(*argYear, *argMonth)
 		log.Println(fmt.Sprintf("Done %d %d", *argYear, *argMonth))
 	}
 }

@@ -8,11 +8,11 @@ import (
 	"strings"
 	"strconv"
 	"time"
-	"github.com/koboshi/mole/database"
+	"github.com/koboshi/game_release_list/context"
 )
 
 //抓取指定年月的发售列表
-func GrabReleaseList(database *database.Database, year int, month int) {
+func GrabReleaseList(year int, month int) {
 	//爬取游戏发售表
 	//http://www.a9vg.com/game/release?genres=&region=&platform=&year={year}&month={month}&quarter=
 	//构造url
@@ -65,17 +65,18 @@ func GrabReleaseList(database *database.Database, year int, month int) {
 			company := subS.Find(".ddwz2 span").Eq(2).Find("em").Text()
 
 			//写入数据
-			addReleaseInfo(database, id, platform, title, releaseDate, gameType, lang, company)
+			addReleaseInfo(id, platform, title, releaseDate, gameType, lang, company)
 		})
 	})
 }
 
 //写入发售数据至数据库
-func addReleaseInfo(database *database.Database, id int, platform string, title string, releaseDate string, gameType string, lang string, company string) {
+func addReleaseInfo(id int, platform string, title string, releaseDate string, gameType string, lang string, company string) {
+	db := context.GetDatabase()
 	//检查是否存在
 	sql := "SELECT COUNT(*) AS `count` FROM game WHERE out_id = ? AND platform = ?"
 	var count int
-	database.QueryOne(sql, id, platform).Scan(&count)
+	db.QueryOne(sql, id, platform).Scan(&count)
 	if count > 0 {
 		//存在则更新发售日期和语种
 		data := make(map[string]interface{})
@@ -84,7 +85,7 @@ func addReleaseInfo(database *database.Database, id int, platform string, title 
 		data["language"] = lang
 		data["company"] = company
 		whereStr := "out_id = ? AND platform = ?"
-		database.Update(data, "game", whereStr, id, platform)
+		db.Update(data, "game", whereStr, id, platform)
 	}else {
 		//不存在则写入数据至mysql
 		data := make(map[string]interface{})
@@ -97,6 +98,6 @@ func addReleaseInfo(database *database.Database, id int, platform string, title 
 		data["platform"] = platform
 		data["add_time"] = time.Now().Format("2006-01-02 15:04:05")
 		data["edit_time"] = time.Now().Format("2006-01-02 15:04:05")
-		database.Ignore(data, "game")
+		db.Ignore(data, "game")
 	}
 }
