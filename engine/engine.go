@@ -2,12 +2,12 @@ package engine
 
 import (
 	"fmt"
-	"log"
 	"github.com/PuerkitoBio/goquery"
 	"strings"
 	"strconv"
 	"github.com/koboshi/game_release_list/model"
 	"github.com/koboshi/game_release_list/utils"
+	"github.com/koboshi/game_release_list/context"
 )
 
 //抓取指定年月的发售列表
@@ -19,14 +19,14 @@ func GrabReleaseList(year int, month int) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		log.Fatal(fmt.Sprintf("status code error: %d %s", resp.StatusCode, resp.Status))
+		context.Logger().Println(fmt.Sprintf("status code error: %d %s", resp.StatusCode, resp.Status))
 		return
 	}
 
 	//分析html
 	doc, err := goquery.NewDocumentFromReader(resp.Body)
 	if err != nil {
-		log.Fatal(fmt.Sprintf("goquery error: %s", err))
+		context.Logger().Println(fmt.Sprintf("goquery error: %s", err))
 		return
 	}
 	doc.Find(".area_column_left .saletimebox .saleinfobox").Each(func (i int, s *goquery.Selection) {

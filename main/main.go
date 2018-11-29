@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"time"
-	"log"
 	"github.com/koboshi/game_release_list/context"
 	"github.com/koboshi/game_release_list/engine"
 	"flag"
@@ -46,7 +45,7 @@ func exec(argYear *int, argMonth *int, argAll *bool) {
 
 	//执行游戏发售日期抓取
 	if *argAll {
-		log.Println(fmt.Sprintf("Start all"))
+		context.Logger().Println(fmt.Sprintf("Start all"))
 		//抓取2010年至下一年的每一个月
 		endYear, _, _ := NowTime.Date()
 		endYear++
@@ -57,11 +56,11 @@ func exec(argYear *int, argMonth *int, argAll *bool) {
 				})
 			}
 		}
-		defer log.Println(fmt.Sprintf("Done all"))
+		defer context.Logger().Println(fmt.Sprintf("Done all"))
 	}else {
 		//只抓取指定年月
-		log.Println(fmt.Sprintf("Start %d %d", *argYear, *argMonth))
+		context.Logger().Println(fmt.Sprintf("Start %d %d", *argYear, *argMonth))
 		engine.GrabReleaseList(*argYear, *argMonth)
-		log.Println(fmt.Sprintf("Done %d %d", *argYear, *argMonth))
+		context.Logger().Println(fmt.Sprintf("Done %d %d", *argYear, *argMonth))
 	}
 }

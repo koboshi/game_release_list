@@ -9,6 +9,7 @@ import (
 	"log"
 	"sync"
 	"github.com/koboshi/mole/work"
+	"io/ioutil"
 )
 
 type Config struct {
@@ -20,6 +21,7 @@ type Config struct {
 	DbMaxConn int `ini:"mysql_max_conn"`
 	DbIdleConn int `ini:"mysql_idle_conn"`
 	GrabMaxConcurrent int `ini:"grab_max_concurrent"`
+	LogOn int `ini:"log_on"`
 }
 
 var ErrLoadConf = errors.New("load gel.conf fail")
@@ -28,9 +30,10 @@ var ErrGoroutinePool = errors.New("create goroutine pool fail")
 
 var appConfig Config
 var db *database.Database
+var logger *log.Logger
 
 func init() {
-	log.SetPrefix("MSG:")
+	log.SetPrefix("LOG:")
 	log.SetFlags(log.Ldate | log.Ltime | log.Llongfile)
 
 	var err error
@@ -64,6 +67,23 @@ func GetGoroutinePool() (*work.Pool) {
 		panic(ErrGoroutinePool)
 	}
 	return pool
+}
+
+func Logger() (*log.Logger) {
+	l := new(sync.Mutex)
+	l.Lock()
+	defer l.Unlock()
+
+	if logger != nil {
+		return logger
+	}
+
+	if appConfig.LogOn != 0 {
+		logger = log.New(os.Stdout, "[LOG]", log.Ldate | log.Ltime | log.Llongfile)
+	}else {
+		logger = log.New(ioutil.Discard, "[LOG]", log.Ldate | log.Ltime | log.Llongfile)
+	}
+	return logger
 }
 
 func GetDatabase() (*database.Database) {
